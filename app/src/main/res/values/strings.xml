@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Cyrillic password</string>
+    <string name="lblPassword">Enter Your Password:</string>
+    <string name="btn_submit">Copy</string>
+    <string name="btn_show">Show</string>
+    <string name="btn_hide">Hide</string>
+    <string name="passwd_copied">Password copied…</string>
+    <string name="passwd_removed">Password deleted from the clipboard</string>
+
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Cyrillic passwords</string>
+    <string name="lblPassword">Введите пароль:</string>
+    <string name="btn_submit">Копировать</string>
+    <string name="btn_show">Показать</string>
+    <string name="btn_hide">Скрыть</string>
+    <string name="passwd_copied">Пароль скопирован…</string>
+    <string name="passwd_removed">Пароль удален из буфера обмена</string>
+
+</resources>
