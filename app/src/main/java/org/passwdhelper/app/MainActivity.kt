@@ -1,184 +1,137 @@
-package org.passwdhelper.app;
+package org.passwdhelper.app
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.text.ClipboardManager;
-import android.text.Editable;
-import android.text.InputType;
-import android.text.method.PasswordTransformationMethod;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
-import android.widget.Toast;
+import android.content.ClipboardManager
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import org.passwdhelper.app.ui.theme.CyrillicPasswordsTheme
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
 
 
-public class MainActivity extends Activity {
-    private static final String TAG = MainActivity.class.getName();
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    private EditText password;
-    private Button btnSubmit;
-    private CheckBox checkBox;
+        setContent {
+            CyrillicPasswordsTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
 
-    private static final String ENG = "`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?";
-    private static final String RUS = "ё1234567890-=йцукенгшщзхъ\\фывапролджэячсмитьбю.Ё!\"№;%:?*()_+ЙЦУКЕНГШЩЗХЪ/ФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,";
-    private static final Map<Character, Character> map = new HashMap<Character, Character>();
-    static{
-        for(int i = 0; i<ENG.length(); i++){
-            char eng = ENG.charAt(i);
-            char rus = RUS.charAt(i);
-            map.put(rus, eng);
-        }
-    }
+                    // Observe toast messages
+                    viewModel.toastMessage?.let { message ->
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                        viewModel.clearToastMessage()
+                    }
 
-    private Timer timer = new Timer();
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        addListenerOnButton();
-
-    }
-
-    public void addListenerOnButton() {
-
-        password = (EditText) findViewById(R.id.txtPassword);
-        btnSubmit = (Button) findViewById(R.id.btnSubmit);
-        checkBox = (CheckBox) findViewById(R.id.btnShow);
-
-        btnSubmit.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "copy passwd");
-                @SuppressWarnings("deprecation")
-                final ClipboardManager cm=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-                Editable text = password.getText();
-
-                if(text!=null) {
-                    final CharSequence passwd = transform(text.toString());
-                    cm.setText(passwd);
-                    Toast toast = Toast.makeText(MainActivity.this, R.string.passwd_copied, Toast.LENGTH_LONG);
-                    toast.setDuration(Toast.LENGTH_LONG);
-                    toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL, 0, 0);
-                    toast.show();
-                    timer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            CharSequence clipboard = cm.getText();
-                            if(clipboard!=null && clipboard.equals(passwd)){
-                                Log.d(TAG, "Remove password from clipboard");
-                                cm.setText("");
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast toast = Toast.makeText(MainActivity.this, R.string.passwd_removed, Toast.LENGTH_LONG);
-                                        toast.setDuration(Toast.LENGTH_LONG);
-                                        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL, 0, 0);
-                                        toast.show();
-                                    }
-                                });
-                            }else{
-                                Log.d(TAG, "Nothing to remove from clipboard");
-                            }
+                    // Clear password when activity is stopped
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            viewModel.clearPassword()
                         }
-                    }, 1000 * 60L); //one minute
+                    }
 
+                    PasswordScreen(
+                        password = viewModel.password,
+                        isPasswordVisible = viewModel.isPasswordVisible,
+                        onPasswordChange = { viewModel.updatePassword(it) },
+                        onTogglePasswordVisibility = { viewModel.togglePasswordVisibility() },
+                        onSubmit = { viewModel.copyPasswordToClipboard(clipboardManager) }
+                    )
                 }
             }
-
-        });
-        checkBox.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                boolean hiddenFlag = getResources().getString(R.string.btn_hide).equals(checkBox.getText());
-                applyHiddenFlag(hiddenFlag);
-            }
-        });
-
-
-    }
-
-    private void applyHiddenFlag(boolean hiddenFlag) {
-        if (hiddenFlag) {
-            checkBox.setText(R.string.btn_show);
-            password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-            setFocus();
-        } else {
-            checkBox.setText(R.string.btn_hide);
-            password.setTransformationMethod(null);
-            password.setInputType(InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-            setFocus();
         }
     }
 
-    private void setFocus() {
-        password.requestFocus();
-        CharSequence txt = password.getText();
-        if(txt!=null) {
-            password.setSelection(txt.length());
-        }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // State is automatically saved by the ViewModel
     }
 
-    private CharSequence transform(String s) {
-        StringBuilder sb = new StringBuilder();
-        for(int i =0; i<s.length(); i++){
-            Character cur = s.charAt(i);
-            Character transformed = map.get(cur);
-            if(transformed==null){
-                sb.append(cur.charValue());
-            }else{
-                sb.append(transformed.charValue());
-            }
-        }
-        return sb.toString();
-    }
-
-    public MainActivity() {
-        super();
-    }
-
-
-
-    @Override
-    protected void onStop() {
-        password.setText("");
-        Log.d(TAG, "onStop Remove password from field");
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        password.setText("");
-        Log.d(TAG, "onDestroy Remove password from field");
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        Log.d(TAG, "restore state");
-        super.onRestoreInstanceState(savedInstanceState);
-        password.setText(savedInstanceState.getCharSequence("tmp.passwd"));
-        boolean hiddenFlag = savedInstanceState.getBoolean("tmp.hide");
-        applyHiddenFlag(hiddenFlag);
-
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        Log.d(TAG, "store state");
-        outState.putCharSequence("tmp.passwd", password.getText().toString());
-        outState.putBoolean("tmp.hide", !getResources().getString(R.string.btn_hide).equals(checkBox.getText()));
-        super.onSaveInstanceState(outState);
+    override fun onPause() {
+        super.onPause()
+        // Clear password when app goes to background
+        viewModel.clearPassword()
     }
 }
+
+@Composable
+fun PasswordScreen(
+    password: String,
+    isPasswordVisible: Boolean,
+    onPasswordChange: (String) -> Unit,
+    onTogglePasswordVisibility: () -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(
+            value = password,
+            onValueChange = onPasswordChange,
+            label = { Text("Password") },
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = isPasswordVisible,
+                onCheckedChange = { onTogglePasswordVisibility() }
+            )
+            Text(text = if (isPasswordVisible) "Hide Password" else "Show Password")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Copy Password")
+        }
+    }
+
+    // Request focus on the password field
+    LaunchedEffect(isPasswordVisible) {
+        focusRequester.requestFocus()
+    }
+}
+
+
