@@ -14,7 +14,7 @@ android {
 
             storeFile file("/home/nikolay/MEGAsync/Android/release-key.jks")
             storePassword storePasswordValue
-            keyAlias "release-alias"
+            keyAlias "release-rsa-alias"
             keyPassword keyPasswordValue
         }
     }
